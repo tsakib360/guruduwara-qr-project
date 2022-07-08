@@ -19,3 +19,4 @@ Route::get('/', function () {
 });
 
 Route::get('/pdf-view', [PDFController::class, 'pdfView'])->name('pdf_view');
+Route::post('/set-qr-session', [PDFController::class, 'setQRSession'])->name('set_qr_session');

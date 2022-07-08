@@ -5,10 +5,13 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const port = process.env.PORT || 5000;
 const apiRoute = require('./src/routes/api.route');
+const formData = require('express-form-data');
 
 app.use(cors());
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
+app.use(formData.parse());
+app.use('/files', express.static('src/files'));
 
 app.get('/', (req, res) => {
     res.status(200).json({
