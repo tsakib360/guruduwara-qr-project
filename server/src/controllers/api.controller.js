@@ -2,6 +2,10 @@ const pdf = require('html-pdf');
 const QRCode = require('qrcode');
 const pdfTemplate = require('../documents');
 const path = require('path');
+const puppeteer = require('puppeteer');
+const { createCanvas, loadImage } = require("canvas");
+const qr = require('qr-image-color');
+const fs = require('fs');
 
 function index(req, res, next) {
     try {
@@ -16,7 +20,50 @@ function index(req, res, next) {
     }
 }
 
-async function  createPDF(req, res, next) {
+async function createQR(req, res, next) {
+    try {
+        // let qr = await QRCode.toDataURL(req.body.url);
+        let qr_image_1 = await create(req.body.url,  150,  '#9f7db0', '#e0ecb4');
+        let qr_image_2 = await create(req.body.url,  150,  '#9f7db0', '#f3d194');
+        // var png_string = qr.image(req.body.url, { type: 'png', color: "purple", transparent: true });
+        // png_string.pipe(fs.createWriteStream('./src/files/i_love_qr.png'));
+        res.status(201).json({
+            message: 'New QR code generated',
+            qr1: qr_image_1,
+            qr2: qr_image_2
+        });
+    } catch (err) {
+        console.error(`Error: `, err.message);
+        next(err);
+    }
+}
+
+async function createPDF(req, res, next) {
+    try {
+        const browser = await puppeteer.launch();
+        const page = await browser.newPage();
+        await page.setViewport({
+            width: 1624,
+            height: 1255,
+            deviceScaleFactor: 1,
+        });
+        await page.goto(process.env.CLIENT_URL + 'pdf-view', {
+            waitUntil: 'networkidle2',
+        });
+        const pdf = await page.pdf({path: `./src/files/${req.body.number}.pdf`, printBackground: true, width: '425mm', height: '330mm'});
+
+        await browser.close();
+        res.status(201).json({
+            message: 'New PDF Created',
+            data: pdf,
+        });
+    } catch (err) {
+        console.error(`Error: `, err.message);
+        next(err);
+    }
+}
+
+async function  createPDFNormal(req, res, next) {
     try {
         let qr = await QRCode.toDataURL(req.body.url);
         let text = req.body.text;
@@ -42,11 +89,30 @@ async function  createPDF(req, res, next) {
 }
 
 function fetchPDF(req, res, next) {
-    res.sendFile(`${path.join(__dirname, '../files/')}/result.pdf`)
+    res.sendFile(`${path.join(__dirname, '../files/')}/${req.body.number}.pdf`)
+}
+
+async function create(dataForQRcode, width, darkcolor, lightcolor) {
+    const canvas = createCanvas(width, width);
+    QRCode.toCanvas(
+        canvas,
+        dataForQRcode,
+        {
+            errorCorrectionLevel: "H",
+            margin: 1,
+            color: {
+                dark: darkcolor,
+                light: lightcolor,
+            },
+            transparent: true
+        }
+    );
+    return canvas.toDataURL("image/png");
 }
 
 module.exports = {
     index,
     createPDF,
-    fetchPDF
+    fetchPDF,
+    createQR
 };
